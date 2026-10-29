@@ -1,0 +1,68 @@
+{
+  "name": "opencode-pica",
+  "version": "2.0.0",
+  "description": "Image generation and editing tools for opencode (v2 plugin API), with inline rendering in the conversation.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "image",
+    "image-generation",
+    "gpt-image"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wiljav/opencode-pica.git"
+  },
+  "homepage": "https://github.com/wiljav/opencode-pica#readme",
+  "bugs": {
+    "url": "https://github.com/wiljav/opencode-pica/issues"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public",
+    "tag": "next"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "npx esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --external:sharp --outfile=dist/index.js",
+    "build:js": "npx esbuild src/index.ts --bundle --platform=node --target=node22 --format=esm --external:sharp --outfile=dist/index.js",
+    "test": "npm test",
+    "prepublishOnly": "npm run build && npm test",
+    "release": "npm publish && rm -rf ~/.cache/opencode/packages/opencode-pica*",
+    "release:legacy": "npm version patch && npm publish --tag latest"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "sharp": "^0.35.4"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": ">=2.0.27",
+    "effect": "^4.0.0"
+  },
+  "devDependencies": {
+    "@opencode/plugin": "2.0.27",
+    "@types/node": "^24.12.2",
+    "effect": "4.0.1",
+    "typescript": "^5.8.2"
+  },
+  "bin": {
+    "opencode-pica": "bin/cli.js"
+  }
+}
