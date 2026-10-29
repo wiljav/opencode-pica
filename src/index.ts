@@ -14,7 +14,7 @@ const GENERATE_DESCRIPTION =
   "Generate an image from a text prompt. This is the only supported way to create images in this session: " +
   "the endpoint and API key are already configured inside this plugin, so NEVER call the image API yourself " +
   "(no curl, no scripts) and never read the API key out of opencode.json. " +
-  "The result includes a file attachment the UI renders automatically; you do NOT need to copy any data URI. " +
+  "The result includes a resource block the UI renders automatically; you do NOT need to copy any data URI. " +
   "Relay any line starting with [Relay to user] to the user. " +
   "To refine a result, call image_edit with the returned path instead of generating a new image. " +
   "Generate exactly ONE image per request — do not produce multiple variants unless the user asks for them. " +
@@ -136,17 +136,17 @@ function resolveDestination(filename: string | undefined, options: ResolvedOptio
   return path.join(dir, `image-${stamp}-${suffix}.png`)
 }
 
-/** A small inline attachment for TUI preview — capped at display budget (JPEG, not full-res PNG) */
+/** A resource block for the tool result — the web UI renders image resources inline */
 async function previewAttachment(file: string): Promise<Attachment> {
   try {
     const uri = await displayDataUri(file, DISPLAY_BUDGET_CHARS)
-    return { type: "file" as const, mime: "image/jpeg", name: "preview.jpg", uri }
+    return { type: "resource" as const, resource: { uri, mimeType: "image/jpeg" } }
   } catch {
-    return { type: "file" as const, mime: "image/png", name: path.basename(file), uri: `data:image/png;base64,${fs.readFileSync(file).toString("base64")}` }
+    return { type: "resource" as const, resource: { uri: `data:image/png;base64,${fs.readFileSync(file).toString("base64")}`, mimeType: "image/png" } }
   }
 }
 
-type Attachment = { type: "file"; mime: string; name: string; uri: string }
+type Attachment = { type: "resource"; resource: { uri: string; mimeType: string } }
 
 /** Extract model/cost tracking info from the API usage payload (OpenRouter uses `cost`, others `total_cost`). */
 function usageTrack(model: string, usage: unknown) {
@@ -202,13 +202,10 @@ export const OpenCodeImagePlugin = {
 
     /**
      * Assemble the tool return value.
-     * Key point: the client only renders images that appear as Markdown image lines in the
-     * assistant's reply. opencode's web UI enforces a Content-Security-Policy allowing only
-     * 'self', data:, https:, and blob: for img-src — so a localhost HTTP URL from a plugin
-     * server is blocked. The display is therefore a downscaled JPEG inline data URI, sized
-     * to fit within opencode's 50 KiB tool-output truncation budget. The model must copy
-     * this line verbatim; the alt text is the fixed word "image" so no prompt characters
-     * can leak through and corrupt the markdown. Full-resolution PNG stays on disk.
+     * The tool result includes a resource content block (data URI JPEG) that the web UI
+     * renders inline. The text block also includes a Markdown `![image](data:...)` line
+     * for clients that support it; the resource block is the reliable rendering path.
+     * The full-resolution PNG stays on disk for image_edit refinement.
      */
     const render = async (label: string, prompt: string, file: string, progress: (m: string) => void, usage: unknown) => {
       const { width, height } = await imageDimensions(file)
@@ -224,7 +221,7 @@ export const OpenCodeImagePlugin = {
         display,
         `${label}: "${prompt}" — saved to ${file} (${width}x${height})`,
         `Refine: call image_edit with image="${file}" and a prompt describing the change.`,
-        "The image above is rendered automatically by the tool result attachment — no need to copy URIs.",
+        "The image above is rendered automatically by the tool result resource — no need to copy URIs.",
         "Do not generate any further images — produce exactly one image per request.",
       ]
       if (notice) output.push(notice)

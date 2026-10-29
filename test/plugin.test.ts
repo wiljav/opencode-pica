@@ -108,7 +108,7 @@ function text(res: any) {
 }
 
 function attachment(res: any) {
-  return typeof res.content === "string" ? undefined : res.content.find((item: any) => item.type === "file")
+  return typeof res.content === "string" ? undefined : res.content.find((item: any) => item.type === "resource")
 }
 
 function png(width: number, height: number) {
@@ -120,7 +120,7 @@ function png(width: number, height: number) {
 }
 
 describe("image_generate", () => {
-  test("saves the image and renders it via a downscaled JPEG data URI (CSP-compatible)", async () => {
+  test("saves the image and renders it via a resource content block", async () => {
     payload = await png(900, 900)
     usagePayload = undefined
     failStatus = undefined
@@ -130,9 +130,13 @@ describe("image_generate", () => {
       const output = text(res)
       expect(output).toContain("rendered automatically")
       expect(output).toContain("exactly one image per request")
-      // CSP-safe data URI (opencode web UI allows data: in img-src)
+      // Standard markdown image line (CSP-safe data URI for clients that render it)
       expect(output).toContain("![image](data:image/jpeg;base64,")
-      expect(attachment(res)?.mime).toBe("image/jpeg")
+      // Resource content block with the same data URI for reliable rendering
+      const resource = attachment(res)
+      expect(resource).toBeDefined()
+      expect(resource.resource.mimeType).toBe("image/jpeg")
+      expect(resource.resource.uri).toMatch(/^data:image\/jpeg;base64,/)
       // Display is a CSP-compatible data URI; fixed alt text "image"
       const dataUri = /!\[image\]\((data:image\/jpeg;base64,[A-Za-z0-9+/=]+)\)/.exec(output)!
       expect(dataUri).toBeDefined()
